@@ -9,7 +9,8 @@
 
     "browser_specific_settings": {
       "gecko": {
-          "id": "bmlg@waves.com"
+          "id": "bmlg@waves.com",
+          "update_url": "https://github.com/idanwork/bmlg/blob/7989f783679a5fc1de6f6bb6288994215bf1086e/dist/updates.json"
       }
     },
 
