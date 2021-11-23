@@ -1,0 +1,20 @@
+{
+    "manifest_version": 2,
+    "name": "BM Link Grabber",
+    "description": "Copy product links clipboard",
+    "version": "1.0.0",
+    "icons": {
+      "64": "icons/icon.png"
+    },
+
+    "browser_specific_settings": {
+      "gecko": {
+          "id": "bmlg@waves.com"
+      }
+    },
+
+    "content_scripts": [{
+        "matches": ["*://bm/*"],
+        "js": ["content-script.js"]
+    }]
+  }
