@@ -4,7 +4,6 @@
 	const pwnLinksInterval = 500;
 	const grabbed=`GRAB🤏`;
 	const style = `
-	<style>
 		#${notificationCenterID}{
 			position: fixed;
 			top: 0;
@@ -78,8 +77,7 @@
 			position: fixed;
 			left: 0;
 			top: 0;
-		}
-	</style>`;
+		}`;
 	
 	let notificationCenter = null;
 	let notification = null;
@@ -139,7 +137,11 @@
 
 			if (!notificationCenter) {
 				// Add the style script
-				document.head.insertAdjacentHTML("beforeend", style);  
+				const styleElement = document.createElement("style");
+
+				styleElement.innerText = style;
+
+				document.head.appendChild(styleElement);  
 
 				// Add the notification center element 
 				notificationCenter = document.createElement("div"); // Create the main elemenet
