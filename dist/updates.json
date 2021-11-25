@@ -1,12 +1,12 @@
 {
     "addons": {
-      "bmlg@waves.com": {
-        "updates": [
-          {
-            "version": "1.0.1",
-            "update_link": "./bm_link_grabber-1.0.1-fx.xpi"
-          }
-        ]
-      }
+        "bmlg@waves.com": {
+            "updates": [
+                {
+                    "version": "1.0.1",
+                    "update_link": "https://github.com/idanwork/bmlg/blob/78b44d0f8b8dc39821e5a2799303d56491050b05/dist/bm_link_grabber-1.0.1-fx.xpi"
+                }
+            ]
+        }
     }
-  }
+}
