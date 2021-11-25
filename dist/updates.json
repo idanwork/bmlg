@@ -2,6 +2,10 @@
     "addons": {
       "bmlg@waves.com": {
         "updates": [
+          {
+            "version": "1.0.1",
+            "update_link": "./bm_link_grabber-1.0.1-fx.xpi"
+          }
         ]
       }
     }
