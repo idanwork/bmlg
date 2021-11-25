@@ -1,8 +1,18 @@
-(function () {
+(function (b) {
+	const w = "▚▀▞";
+	const [os, agent, browserCanHandleExternalLinks] = getOSAndBrowser();
 	const notificationCenterID = '___notificationCenter___';
 	const fadeTimeout = 2500;
-	const pwnLinksInterval = 500;
-	const grabbed=`GRAB🤏`;
+	const updateLinksInterval = 500;
+	const grabbed = `GRAB🤏`;
+	const tooltip = `When you click on "${grabbed}" link,
+I'll save it in the clipboard.
+Use ${os === "Win" ? "⊞ Win + R" : "⌘ Cmd + K"} and paste the link there.` + (os === "Win" ? "" : `
+Mac users, you can also allow FireFox to open smb links directly
+Make sure to select "Finder" on the poupup that you get and click "always allow"`);
+	const linksToHandlePrefix = os === "Win" ? "\\\\\\\\becks" : "openfolder";
+	const getUrl = b.runtime?.getURL ?? b.extension?.getURL ?? (s => `./${s}`);
+
 	const style = `
 		#${notificationCenterID}{
 			position: fixed;
@@ -78,10 +88,62 @@
 			left: 0;
 			top: 0;
 		}`;
-	
+
 	let notificationCenter = null;
 	let notification = null;
 	let notificationFadeTimer = null;
+
+	init();
+
+	/*  Following MDN's
+		Engine		Must contain						Must not contain
+		Edge		Edg/xyz					
+		Firefox		Firefox/xyz							Seamonkey/xyz
+		Seamonkey	Seamonkey/xyz	
+		Chrome		Chrome/xyz							Chromium/xyz
+		Chromium	Chromium/xyz	
+		Safari		Safari/xyz							Chrome/xyz or Chromium/xyz
+		Opera 15+ 	(Blink-based engine)				OPR/xyz	
+		Opera 12- 	(Presto-based engine)				Opera/xyz	
+		Internet 	; MSIE xyz;														<== Too old for support here anyway
+		Internet 	Explorer 11	Trident/7.0; .*rv:xyz								<== Too old for support here anyway
+	*/
+	function getOSAndBrowser() {
+		const userAgent = window?.navigator?.userAgent;
+		const os = (/\((.+?);.*\)/.exec(userAgent)?.[1]?.toLocaleLowerCase().includes("macintosh") ?? false) ? "Mac" : "Win";
+		const agents = new Set([...window.navigator.userAgent.matchAll(/(\w+)\/[0-9.]+/ig)].reduce((acc, ua) => {
+			ua.length > 1 && acc.push(ua[1]);
+			return acc;
+		}, []));
+		let agent;
+		let browserCanHandleExternalLinks = false;
+
+		if (agents.has("Edg")) {
+			agent = "Edge";
+			browserCanHandleExternalLinks = true;
+		}
+		else if (agents.has("Seamonkey")) {
+			agent = "Seamonkey";
+		}
+		else if (agents.has("Firefox")) {
+			agent = "Firefox";
+			browserCanHandleExternalLinks = os === "Mac";
+		}
+		else if (agent.has("Chromium")) {
+			agent = "Chromium";
+		}
+		else if (agent.has("Chrome")) {
+			agent = "Chrome";
+		}
+		else if (agent.has("Safari")) {
+			agent = "Safari";
+		}
+		else {
+			agent = "Unsupported";
+		}
+
+		return [os, agent, browserCanHandleExternalLinks];
+	}
 
 	// Handles onclicks on elements that hava dataset.link
 	async function onMouseDown(e) {
@@ -91,19 +153,25 @@
 			return;
 		}
 
-		try{
-			await copyToClipboard(`"${targetUrl}"`); // Add quotes to support spaces if any
-		
+		try {
+			// For Windows only add quotes to support spaces in the file link
+			await copyToClipboard(os === "Win" ? `"${targetUrl}"` : targetUrl);
+
 			showNotification("Link copied to clipboard!", targetUrl, "info");
 		}
-		catch(err){
+		catch (err) {
 			showNotification("Error has occured", err?.message?.toString() ?? "No detaials are available", "error");
 		}
 
+		// If the bros
+		if (browserCanHandleExternalLinks){
+			return;
+		}
+			
 		e.preventDefault();
 		e.stopPropagation();
-
-		return 0;
+	
+		return 0; // The 0 is on purpose in this case
 	}
 
 	// copy text to clipboard 
@@ -141,7 +209,7 @@
 
 				styleElement.innerText = style;
 
-				document.head.appendChild(styleElement);  
+				document.head.appendChild(styleElement);
 
 				// Add the notification center element 
 				notificationCenter = document.createElement("div"); // Create the main elemenet
@@ -151,44 +219,42 @@
 				// create the icon
 				const img = document.createElement("img"); // create the icon
 
-				img.src = browser.runtime.getURL("icons/icon.png"),
-				img.title = `When you click on "${grabbed}" link,
-I'll save it in the clipboard.
-Use "⊞ Win + R" and paste the link there.`;
+				img.src = getUrl("icons/icon.png"),
+					img.title = tooltip;
 
 				notificationCenter.appendChild(img);
 			}
 		}
 		catch (e) {
-			console.error(e);
+			console.error(`${w} error in createNotifcationCenter`, e);
 		}
 	}
 
-	function showNotification(title, message, type){
-		if (!notificationCenter){
-			console.error("There's no notifcation center element, cannot show notifcation 🥺");
-			
+	function showNotification(title, message, type) {
+		if (!notificationCenter) {
+			console.error(`${w} there's no notifcation center element, cannot show notifcation 🥺`);
+
 			return;
 		}
 
-		if (!notification){
+		if (!notification) {
 			notification = document.createElement("div");
 			notificationCenter.appendChild(notification);
 		}
-		else{
+		else {
 			clearTimeout(notificationFadeTimer);
 		}
 
 		notification.className = `notification ${type}`;
 
 		// clear childrens
-		while(notification.firstChild){
+		while (notification.firstChild) {
 			notification.removeChild(notification.firstChild)
 		}
 
 		// Add the title
 		let lbl = document.createElement("label");
-		lbl.className="titie";
+		lbl.className = "titie";
 		lbl.innerText = title;
 		notification.appendChild(lbl);
 
@@ -198,22 +264,51 @@ Use "⊞ Win + R" and paste the link there.`;
 		lbl.title = message.replace(/"/g, "");
 		lbl.innerText = message;
 		notification.appendChild(lbl);
-		
+
 		// restart the fade timer
 		notificationFadeTimer = setTimeout(() => notification.classList.toggle("hidden", true), fadeTimeout);
 	}
 
-	createNotifcationCenter();
+	function init() {
+		console.info(`${w} Initializing...`);
 
-	// Handle mouse down on the document (click is too late)
-	window.addEventListener("mousedown", onMouseDown);
+		try {
+			createNotifcationCenter();
+		}
+		catch (e) {
+			console.error(`${w} Coudld not create notifcation center elements`, e);
+		}
 
-	// Update the anchors that the BM Creates
-	setInterval(() => document.querySelectorAll("td a+a[href^=\\\\\\\\becks]").forEach(link => {
-		const newRef = `file://${link.href.replace("\\", "/").replace(/http:\/\//i, "")}`;
+		// Handle mouse down on the document (click is too late)
+		window.addEventListener("mousedown", onMouseDown);
 
-		link.href = newRef;
-		link.innerText = grabbed;
-		link.dataset.link = newRef;
-	}), pwnLinksInterval);
-})();
+		// Update the anchors that the BM Creates
+		setInterval(() => document.querySelectorAll(`td a+a[href^=${linksToHandlePrefix}]`).forEach(link => {
+			let newRef;
+
+			if (os === "Win") {
+				// don't change it
+				if (link.href.startsWith("file://")) {
+					newRef = link.href;
+				}
+				else {
+					newRef = `file://${link.href.replace("\\", "/").replace(/http:\/\//i, "")}`;
+				}
+			}
+			else {
+				newRef = link.href.replace("openfolder", "smb").replace("/bs_mixed/", "/");
+			}
+
+			// Edge and Firefox for Mac can handle the file:// links directly so keep the link.target
+			if (!browserCanHandleExternalLinks) {
+				link.target = "_blank";
+			}
+
+			link.href = newRef;
+			link.innerText = grabbed;
+			link.dataset.link = newRef;
+		}), updateLinksInterval);
+
+		console.info(`${w} Ready ${os}/${agent} handles file links? ${browserCanHandleExternalLinks}`);
+	}
+})(typeof browser !== "undefined" ? browser : chrome);
